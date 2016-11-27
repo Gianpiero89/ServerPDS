@@ -1,0 +1,3 @@
+C:\Users\Virna\Documents\Visual Studio 2015\Projects\ProgettoPDS v1.1\serverTcp\serverTcp\bin\Debug\serverTcp.exe.config
+C:\Users\Virna\Documents\Visual Studio 2015\Projects\ProgettoPDS v1.1\serverTcp\serverTcp\obj\Debug\serverTcp.exe
+C:\Users\Virna\Documents\Visual Studio 2015\Projects\ProgettoPDS v1.1\serverTcp\serverTcp\obj\Debug\serverTcp.pdb
