@@ -8,28 +8,58 @@ namespace serverTcp.Utils
 {
     class InfoFileToRestore
     {
-        private string path;
+        private string absolutePath;
+        private string relativePath;
+        private string file;
         private long dimension;
 
         public InfoFileToRestore() { }
-        public InfoFileToRestore(string path, long dimension)
+        public InfoFileToRestore(string absolute, string relative, string file,  long dimension)
         {
-            this.path = path;
+            this.absolutePath = absolute;
+            this.relativePath = relative;
+            this.file = file;
             this.dimension = dimension;
         }
 
 
-        public string PATH
+        public string ABSOLUTE
         {
             get
             {
-                return path;
+                return absolutePath;
             }
             set
             {
-                path = value;
+                absolutePath = value;
             }
         }
+
+        public string RELATIVE
+        {
+            get
+            {
+                return relativePath;
+            }
+            set
+            {
+                relativePath = value;
+            }
+        }
+
+        public string FILE
+        {
+            get
+            {
+                return file;
+            }
+            set
+            {
+                file = value;
+            }
+        }
+
+
 
         public long DIM
         {

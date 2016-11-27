@@ -262,8 +262,10 @@ namespace serverTcp.Network
             {
                 XmlNodeList list = element[i].ChildNodes;
                 String filePosition = Directory.GetCurrentDirectory() + @"\" + path + list.Item(1).FirstChild.Value + @"\" + list.Item(0).FirstChild.Value;
+                String relative = list.Item(1).FirstChild.Value + @"\";
+                String file = list.Item(0).FirstChild.Value;
                 long dim = long.Parse(list.Item(2).FirstChild.Value);
-                restore.Add(new Utils.InfoFileToRestore(filePosition, dim));
+                restore.Add(new Utils.InfoFileToRestore(filePosition, relative, file, dim));
             }
             return restore;
         }

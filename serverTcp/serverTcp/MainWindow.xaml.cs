@@ -359,44 +359,65 @@ namespace serverTcp
                         client.SendData("+++++OK");
                         IList<Utils.InfoFileToRestore> restore = client.restoreBackup(pathForServer);
                         string cmd = "";
+                        Boolean first = true;
+                        MessageBox.Show("Lenght : " + restore.Count);
                         foreach (Utils.InfoFileToRestore file in restore)
                         {
-                            client.SendData("+++FILE");
+                            MessageBox.Show("New File");
+                            if (first)
+                                client.SendData("+++FILE");
                             eventLog.Dispatcher.Invoke(new Action(() =>
                             {
-                                eventLog.Text += "Restore file " + "\ndim : " + file.PATH.Length + "\n";
-                            }), DispatcherPriority.ContextIdle);
+                                eventLog.Text += "Restore file " + "\ndim : " + file.ABSOLUTE.Length + "\n";
+                            }), DispatcherPriority.ContextIdle); 
+                            client.sendDimension(file.RELATIVE.Length);
                             string c = client.ReciveCommand();
                             if (c.Equals("+++++OK"))
                             {
-                                client.sendDimension(file.PATH.Length);
+
+                                client.SendData(file.RELATIVE);
                                 c = client.ReciveCommand();
                                 if (c.Equals("+++++OK"))
                                 {
-                                    client.SendData("+++++OK");
-                                    client.SendData(file.PATH);
+                                        
+                                    client.sendDimension(file.FILE.Length);
                                     c = client.ReciveCommand();
+                                    if (c.Equals("+++++OK"))
+                                    {
+                                           
+                                        client.SendData(file.FILE);
+                                        c = client.ReciveCommand();
                                         if (c.Equals("+++++OK"))
                                         {
-                                            client.SendData("+++++OK");
+                                                
                                             client.sendDimension((int)file.DIM);
                                             c = client.ReciveCommand();
                                             if (c.Equals("+++++OK"))
                                             {
-                                                client.SendData("+++++OK");
-                                                client.sendFile(file.PATH);
+                                                    
+                                                client.sendFile(file.ABSOLUTE);
                                                 eventLog.Dispatcher.Invoke(new Action(() =>
                                                 {
-                                                    eventLog.Text += "Restore file  " + file.PATH + "\n";
+                                                    eventLog.Text += "Restore file :  " + file.FILE + "\n path : " + file.RELATIVE + "\n" ;
                                                 }), DispatcherPriority.ContextIdle);
-                                                cmd = client.ReciveCommand();
-
-                                                client.SendData("++++END");
+                                                c = client.ReciveCommand();
+                                                if (c.Equals("+++++OK"))
+                                                {
+                                                    client.SendData("+++NEXT");
+                                                    first = false;
+                                                }
+                                                else
+                                                {
+                                                    client.SendData("++++END");
+                                                }
                                             }
                                         }
                                     }
+                                    
+                                }
                             }
                         }
+                        client.SendData("++++END");
 
                     }
                         // Shutdown and end connection
