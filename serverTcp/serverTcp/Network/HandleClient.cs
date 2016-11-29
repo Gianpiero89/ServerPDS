@@ -9,8 +9,8 @@ using System.IO;
 using System.Xml;
 using System.Xml.Linq;
 using System.Data.SQLite;
-
-
+//cacca
+//CACCA2
 namespace serverTcp.Network
 {
     class HandleClient
