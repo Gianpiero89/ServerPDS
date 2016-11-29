@@ -10,7 +10,9 @@ namespace serverTcp.Utils
     {
         private String username;
         private String password;
+        private String salt;                //AGGIUNGEREEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE
         private String id;
+        private Database.SQLiteDatabase DBConn;
 
         public User() { }
 
@@ -19,6 +21,14 @@ namespace serverTcp.Utils
             this.username = username;
             this.password = password;
         }
+
+        public User(String username, String password, Database.SQLiteDatabase DBConn)
+        {
+            this.username = username;
+            this.password = password;
+            this.DBConn = DBConn;
+        }
+
 
         public String ID
         {
@@ -55,7 +65,33 @@ namespace serverTcp.Utils
                 password = value;
             }
         }
+        public String SALT
+        {
+            get
+            {
+                return salt;
+            }
+            set
+            {
+                salt = value;
+            }
+        }
 
+        /*    static public string getSalt(string username)
+            {
+              //  DatabaseManager db = DatabaseManager.getInstance();
+               // string salt = db.getSalt(username);
 
+             //   return salt;
+            }
+            */
+        public bool register()
+        {
+
+            Network.HandleClient.DBManagerRegister(this.username, this.password, this.DBConn);
+
+            return true;
+
+        }
     }
 }

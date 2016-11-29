@@ -9,8 +9,11 @@ using System.IO;
 using System.Xml;
 using System.Xml.Linq;
 using System.Data.SQLite;
-//cacca
-//CACCA2
+
+using System.Security.Cryptography;
+using System.Security.Cryptography.X509Certificates;
+using System.Net.Security;
+
 namespace serverTcp.Network
 {
     class HandleClient
@@ -222,11 +225,10 @@ namespace serverTcp.Network
                 }
             }
             else
-            { 
-                num += 1;
+            {
                 query = String.Format("INSERT INTO BACKUP(BACKUP_NAME, Version, TIME, CURRENT, USER_ID) VALUES('{0}', '{1}', '{2}', NULL, '{3}')", backupID, num, time, id);
                 dbConn.ExecuteScalar(query);
-                
+                num += 1;
             }
             
 
@@ -239,7 +241,7 @@ namespace serverTcp.Network
                 long dim = long.Parse(list.Item(2).FirstChild.Value);
                 String crc = list.Item(4).FirstChild.Value;
                 DateTime timestamp = Convert.ToDateTime(list.Item(3).FirstChild.Value);
-                files.Add(new clientTCP.Utils.FileInfomation(path, name, dim, System.Text.Encoding.ASCII.GetBytes(crc), timestamp));
+                files.Add(new clientTCP.Utils.FileInfomation(path, name, dim, System.Text.Encoding.ASCII.GetBytes(crc), Convert.ToDateTime(time)));
                                               
             }
             newPath = backupID + @"\" + num;
@@ -247,29 +249,64 @@ namespace serverTcp.Network
         }
 
 
-        public IList<Utils.InfoFileToRestore> restoreBackup(String path)
+        public List<String> restoreBackup(String fileName, String id)
         {
-            //string path = dbConn.ExecuteSelectMultiRow(String.Format("SELECT BACKUP_NAME, Version FROM BACKUP WHERE USER_ID = '{0}' AND TIME = '{1}'", id, date), "BACKUP_NAME", "Version");
-            IList<Utils.InfoFileToRestore> restore = new List<Utils.InfoFileToRestore>();
-            XmlDocument doc = new XmlDocument();
-            doc.LoadXml(File.ReadAllText(Directory.GetCurrentDirectory() + @"\" + path + @"\Config.xml"));
-            Console.WriteLine(Directory.GetCurrentDirectory() + @"\" + path + @"\Config.xml");
-            string[] tmp = path.Split('\\');
-            XmlElement root = doc.DocumentElement;
-
-            XmlNodeList element = root.ChildNodes;
-            for (int i = 0; i < element.Count; i++)
-            {
-                XmlNodeList list = element[i].ChildNodes;
-                String filePosition = Directory.GetCurrentDirectory() + @"\" + path + list.Item(1).FirstChild.Value + @"\" + list.Item(0).FirstChild.Value;
-                String relative = list.Item(1).FirstChild.Value + @"\";
-                String file = list.Item(0).FirstChild.Value;
-                long dim = long.Parse(list.Item(2).FirstChild.Value);
-                restore.Add(new Utils.InfoFileToRestore(filePosition, relative, file, dim));
-            }
-            return restore;
+            return null;
+        }
+        
+        ///AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAaaaaaaaaaaaaaaaaaaaaaaaaaa
+        public static String DBManagerRegister(String Username, String Password, Database.SQLiteDatabase dbConn)
+        {
+            string Salt = RandomString(10);
+           
+            String sql = String.Format("INSERT INTO USERS (Username, Password,Salt) values ('{0}', '{1}', '{2}')",Username, hashPassword(Password, Salt),Salt);
+            String risultato = dbConn.ExecuteScalar(sql);
+            Console.WriteLine("Risulato: "+risultato);
+            return null;
         }
 
+        private static Random random = new Random();
+        public static string RandomString(int length)
+        {
+            const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+            return new string(Enumerable.Repeat(chars, length).Select(s => s[random.Next(s.Length)]).ToArray());
+        }
+
+
+
+        static public string hashPassword(string password, string salt)
+        {
+            return Hash(Hash(password) + salt);
+        }
+
+        static private string Hash(string input)
+        {
+            using (SHA1Managed sha1 = new SHA1Managed())
+            {
+                var hash = sha1.ComputeHash(Encoding.UTF8.GetBytes(input));
+                var sb = new StringBuilder(hash.Length * 2);
+
+                foreach (byte b in hash)
+                {
+                    sb.Append(b.ToString("x2"));
+                }
+
+                return sb.ToString();
+            }
+        }
+
+        public static bool ValidateServerCertificate(
+              object sender,
+              X509Certificate certificate,
+              X509Chain chain,
+              SslPolicyErrors sslPolicyErrors)
+        {
+            X509Certificate cert = new X509Certificate("certificate\\certificate.cer");
+            if (cert.Equals(cert))
+                return true;
+            return false;
+        }
+        /// ////////////////////////AAAAAAAAAAAAAAAAAAAaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 
 
         public void sendDimension(int dim)
@@ -284,14 +321,6 @@ namespace serverTcp.Network
         {
             Byte[] dati = System.Text.Encoding.ASCII.GetBytes(data);
             ns.Write(dati, 0, dati.Length);
-            ns.Flush();
-
-        }
-
-        public void sendFile(String path)
-        {
-            Byte[] data = File.ReadAllBytes(@path);
-            ns.Write(data, 0, data.Length);
             ns.Flush();
 
         }

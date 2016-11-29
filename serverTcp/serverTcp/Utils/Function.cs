@@ -29,13 +29,26 @@ namespace serverTcp.Utils
             else
                 return IPAddress.Parse(IPAdd);
         }
-
+        /////////////////////////////////////////////////////////////////////AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
         public static Boolean existUser(User u, Database.SQLiteDatabase dbConn)
         {
-            string query = String.Format("SELECT COUNT(*) FROM USERS WHERE Username='{0}' AND Password='{1}'", u.USERNAME, u.PASSWORD);
+           
+            string query = String.Format("SELECT COUNT(*) FROM USERS WHERE Username='{0}' AND Password= '{1}'", u.USERNAME, u.PASSWORD);
             if (Int32.Parse(dbConn.ExecuteScalar(query)) > 0) return true;
             else return false;
+
+           
+
         }
+
+        public static String GetSaltUser(User u, Database.SQLiteDatabase dbConn)
+        {
+            string salt = String.Format("SELECT Salt FROM USERS WHERE Username= '{0}'", u.USERNAME);
+            return (dbConn.ExecuteScalar(salt));
+ 
+       
+        }
+    /////////////////////////////////////////////////////////////////////AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
 
         public static string Get16CharacterGenerator()
         {
