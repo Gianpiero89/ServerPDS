@@ -52,14 +52,6 @@ namespace serverTcp.Utils
 
 
 
-        public static String GetSaltUser(User u, Database.SQLiteDatabase dbConn)
-        {
-            string salt = String.Format("SELECT Salt FROM USERS WHERE Username= '{0}'", u.USERNAME);
-            return (dbConn.ExecuteScalar(salt));
-
-
-        }
-
         public static string Get16CharacterGenerator()
         {
             string path = Path.GetRandomFileName();
