@@ -10,6 +10,9 @@ using System.Xml;
 using System.Xml.Linq;
 using System.Data.SQLite;
 
+using System.Security.Cryptography;
+using System.Security.Cryptography.X509Certificates;
+using System.Net.Security;
 
 namespace serverTcp.Network
 {
@@ -270,6 +273,59 @@ namespace serverTcp.Network
             return restore;
         }
 
+        ///AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAaaaaaaaaaaaaaaaaaaaaaaaaaa
+        public static String DBManagerRegister(String Username, String Password, Database.SQLiteDatabase dbConn)
+        {
+            string Salt = RandomString(10);
+
+            String sql = String.Format("INSERT INTO USERS (Username, Password,Salt) values ('{0}', '{1}', '{2}')", Username, hashPassword(Password, Salt), Salt);
+            String risultato = dbConn.ExecuteScalar(sql);
+            Console.WriteLine("Risulato: " + risultato);
+            return null;
+        }
+
+        private static Random random = new Random();
+        public static string RandomString(int length)
+        {
+            const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+            return new string(Enumerable.Repeat(chars, length).Select(s => s[random.Next(s.Length)]).ToArray());
+        }
+
+
+
+        static public string hashPassword(string password, string salt)
+        {
+            return Hash(Hash(password) + salt);
+        }
+
+        static private string Hash(string input)
+        {
+            using (SHA1Managed sha1 = new SHA1Managed())
+            {
+                var hash = sha1.ComputeHash(Encoding.UTF8.GetBytes(input));
+                var sb = new StringBuilder(hash.Length * 2);
+
+                foreach (byte b in hash)
+                {
+                    sb.Append(b.ToString("x2"));
+                }
+
+                return sb.ToString();
+            }
+        }
+
+        public static bool ValidateServerCertificate(
+              object sender,
+              X509Certificate certificate,
+              X509Chain chain,
+              SslPolicyErrors sslPolicyErrors)
+        {
+            X509Certificate cert = new X509Certificate("certificate\\certificate.cer");
+            if (cert.Equals(cert))
+                return true;
+            return false;
+        }
+        /// ////////////////////////AAAAAAAAAAAAAAAAAAAaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 
 
         public void sendDimension(int dim)

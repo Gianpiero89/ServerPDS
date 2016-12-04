@@ -22,3 +22,24 @@ C:\Users\Virna\Source\Repos\ServerPDS\serverTcp\serverTcp\obj\Debug\serverTcp_Ma
 C:\Users\Virna\Source\Repos\ServerPDS\serverTcp\serverTcp\obj\Debug\serverTcp.g.resources
 C:\Users\Virna\Source\Repos\ServerPDS\serverTcp\serverTcp\obj\Debug\serverTcp.Properties.Resources.resources
 C:\Users\Virna\Source\Repos\ServerPDS\serverTcp\serverTcp\obj\Debug\serverTcp.csproj.GenerateResource.Cache
+C:\Users\Izio\Desktop\Progetto PDS v2.0 xD\Repos\Repos\ServerPDS\serverTcp\serverTcp\bin\Debug\serverTcp.exe.config
+C:\Users\Izio\Desktop\Progetto PDS v2.0 xD\Repos\Repos\ServerPDS\serverTcp\serverTcp\obj\Debug\serverTcp.exe
+C:\Users\Izio\Desktop\Progetto PDS v2.0 xD\Repos\Repos\ServerPDS\serverTcp\serverTcp\obj\Debug\serverTcp.pdb
+C:\Users\Izio\Desktop\Progetto PDS v2.0 xD\Repos\Repos\ServerPDS\serverTcp\serverTcp\bin\Debug\serverTcp.exe
+C:\Users\Izio\Desktop\Progetto PDS v2.0 xD\Repos\Repos\ServerPDS\serverTcp\serverTcp\bin\Debug\serverTcp.pdb
+C:\Users\Izio\Desktop\Progetto PDS v2.0 xD\Repos\Repos\ServerPDS\serverTcp\serverTcp\bin\Debug\EntityFramework.dll
+C:\Users\Izio\Desktop\Progetto PDS v2.0 xD\Repos\Repos\ServerPDS\serverTcp\serverTcp\bin\Debug\EntityFramework.SqlServer.dll
+C:\Users\Izio\Desktop\Progetto PDS v2.0 xD\Repos\Repos\ServerPDS\serverTcp\serverTcp\bin\Debug\System.Data.SQLite.dll
+C:\Users\Izio\Desktop\Progetto PDS v2.0 xD\Repos\Repos\ServerPDS\serverTcp\serverTcp\bin\Debug\System.Data.SQLite.EF6.dll
+C:\Users\Izio\Desktop\Progetto PDS v2.0 xD\Repos\Repos\ServerPDS\serverTcp\serverTcp\bin\Debug\System.Data.SQLite.Linq.dll
+C:\Users\Izio\Desktop\Progetto PDS v2.0 xD\Repos\Repos\ServerPDS\serverTcp\serverTcp\bin\Debug\EntityFramework.xml
+C:\Users\Izio\Desktop\Progetto PDS v2.0 xD\Repos\Repos\ServerPDS\serverTcp\serverTcp\bin\Debug\EntityFramework.SqlServer.xml
+C:\Users\Izio\Desktop\Progetto PDS v2.0 xD\Repos\Repos\ServerPDS\serverTcp\serverTcp\bin\Debug\System.Data.SQLite.xml
+C:\Users\Izio\Desktop\Progetto PDS v2.0 xD\Repos\Repos\ServerPDS\serverTcp\serverTcp\obj\Debug\serverTcp.csprojResolveAssemblyReference.cache
+C:\Users\Izio\Desktop\Progetto PDS v2.0 xD\Repos\Repos\ServerPDS\serverTcp\serverTcp\obj\Debug\MainWindow.baml
+C:\Users\Izio\Desktop\Progetto PDS v2.0 xD\Repos\Repos\ServerPDS\serverTcp\serverTcp\obj\Debug\MainWindow.g.cs
+C:\Users\Izio\Desktop\Progetto PDS v2.0 xD\Repos\Repos\ServerPDS\serverTcp\serverTcp\obj\Debug\App.g.cs
+C:\Users\Izio\Desktop\Progetto PDS v2.0 xD\Repos\Repos\ServerPDS\serverTcp\serverTcp\obj\Debug\serverTcp_MarkupCompile.cache
+C:\Users\Izio\Desktop\Progetto PDS v2.0 xD\Repos\Repos\ServerPDS\serverTcp\serverTcp\obj\Debug\serverTcp.g.resources
+C:\Users\Izio\Desktop\Progetto PDS v2.0 xD\Repos\Repos\ServerPDS\serverTcp\serverTcp\obj\Debug\serverTcp.Properties.Resources.resources
+C:\Users\Izio\Desktop\Progetto PDS v2.0 xD\Repos\Repos\ServerPDS\serverTcp\serverTcp\obj\Debug\serverTcp.csproj.GenerateResource.Cache

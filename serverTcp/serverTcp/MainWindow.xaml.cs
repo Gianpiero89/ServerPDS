@@ -242,7 +242,27 @@ namespace serverTcp
                         client.SendData("+++++OK");
                         string password = client.reciveCredentials(dim);
                         string[] temp = password.Split(':');
+
+
+
                         currentUser = new Utils.User(temp[0], temp[1]);
+                        /////////////////////////////////////////////////////////////////////AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+
+                        string salt = Utils.Function.GetSaltUser(currentUser, dbConn);
+                        if (salt == null)
+                        {
+                            client.SendData("++CLOSE");
+                            client.Close();
+                        }
+
+                        String PasswordSalt = Network.HandleClient.hashPassword(temp[1], salt);
+
+                        /////////////////////////////////////////////////////////////////////AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+
+                        currentUser = new Utils.User(temp[0], PasswordSalt);
+
+
+
                         if (Utils.Function.existUser(currentUser, dbConn))
                         {
                             client.SendData("++CLOSE");
@@ -420,9 +440,31 @@ namespace serverTcp
                         client.SendData("++++END");
 
                     }
-                        // Shutdown and end connection
+                    // Shutdown and end connection
 
-                    
+                    if (name.Equals("++++REG"))
+                    {
+                        Utils.User user;
+
+                        int UserDim = client.reciveDimension();
+                        Console.WriteLine("ciao");
+
+
+                        client.SendData("+++++OK");
+                        string UsernameReg = client.reciveCredentials(UserDim);
+
+                        client.SendData("+++++OK");
+                        int PassDim = client.reciveDimension();
+
+
+                        client.SendData("+++++OK");
+                        string PasswordReg = client.reciveCredentials(PassDim);
+
+
+                        user = new Utils.User(UsernameReg, PasswordReg, this.dbConn);
+                        user.register();
+
+                    }
 
                 }
                 client.SendData("++CLOSE");
