@@ -38,8 +38,6 @@ namespace serverTcp
         private TcpClient clients;
         private List<Network.HandleClient> list;
         private Database.SQLiteDatabase dbConn;
-        private Utils.User currentUser;
-        private List<clientTCP.Utils.FileInfomation> files;
 
         public void CreateDBAndTable()
         {
@@ -76,7 +74,7 @@ namespace serverTcp
             string ip = "127.0.0.1", port = "1500";
             server = new Server(Utils.Function.checkIPAddress(ip), Int32.Parse(port));
             //clients = new List<Thread>();
-            files = new List<clientTCP.Utils.FileInfomation>();
+            
             list = new List<Network.HandleClient>();
             //CreateDBAndTable();
             InitializeComponent();
@@ -172,11 +170,11 @@ namespace serverTcp
                     }), DispatcherPriority.ContextIdle);
 
                     client = server.waitForConnection();
-                    if (client.Connected) { 
-                        Network.HandleClient hc = new Network.HandleClient(client);
+                    if (client.Connected)
+                    {
+                        Network.HandleClient hc = new Network.HandleClient(client, eventLog, dbConn);
                         list.Add(hc);
-                        new Thread(new ParameterizedThreadStart(handleClient)).Start(hc);
-                    }
+                    }      
                 }
                 if (client != null)
                     client.Close();
@@ -189,295 +187,6 @@ namespace serverTcp
                 return;              
             }
         }
-
-
-
-        // The ThreadProc method is called when the thread starts.
-        // It loops ten times, writing to the console and yielding 
-        // the rest of its time slice each time, and then ends.
-        public void handleClient(object newClient)
-        {
-            Network.HandleClient client = (Network.HandleClient)newClient;
-            String name = null;
-            string fileName = Utils.Function.Get16CharacterGenerator() + ".xml";
-            Boolean _clientRunning = true;
-
-            // Perform a blocking call to accept requests.
-            // You could also user server.AcceptSocket() here.
-            eventLog.Dispatcher.Invoke(new Action(() =>
-            {
-                eventLog.Text += "Client Connected!\n";
-            }), DispatcherPriority.ContextIdle);
-             
-            
-            client.SendData("+++OPEN");
-            try
-            {
-                while (_clientRunning)
-                {
-                    eventLog.Dispatcher.Invoke(new Action(() =>
-                    {
-                        eventLog.Text += "Wait for action!\n";
-                    }), DispatcherPriority.ContextIdle);
-                    name = client.ReciveCommand();
-                    eventLog.Dispatcher.Invoke(new Action(() =>
-                    {
-                        eventLog.Text += name + "\n";
-                    }), DispatcherPriority.ContextIdle);
-
-                    if (name.Equals("+++AUTH"))
-                    {
-                        client.SendData("+++++OK");
-                        int dim = client.reciveDimension();
-                        client.SendData("+++++OK");
-                        string password = client.reciveCredentials(dim);
-                        string[] temp = password.Split(':');
-                        currentUser = new Utils.User(temp[0], temp[1]);
-
-                    }
-                    if (name.Equals("++LOGIN"))
-                    {
-                        client.SendData("+++++OK");
-                        int dim = client.reciveDimension();
-                        client.SendData("+++++OK");
-                        string password = client.reciveCredentials(dim);
-                        string[] temp = password.Split(':');
-
-
-
-                        currentUser = new Utils.User(temp[0], temp[1]);
-                        /////////////////////////////////////////////////////////////////////AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
-
-                        string salt = Utils.Function.GetSaltUser(currentUser, dbConn);
-                        if (salt == null)
-                        {
-                            client.SendData("++CLOSE");
-                            client.Close();
-                        }
-
-                        String PasswordSalt = Network.HandleClient.hashPassword(temp[1], salt);
-
-                        /////////////////////////////////////////////////////////////////////AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
-
-                        currentUser = new Utils.User(temp[0], PasswordSalt);
-
-
-
-                        if (Utils.Function.existUser(currentUser, dbConn))
-                        {
-                            client.SendData("++CLOSE");
-                            client.Close();
-                        }
-                        else
-                        {
-                            MessageBox.Show("Utente Non Valido!");
-                            client.SendData("INVALID");
-                            client.Close();
-                            _clientRunning = false;
-                            return;
-                        }
-
-                        eventLog.Dispatcher.Invoke(new Action(() =>
-                        {
-                            eventLog.Text +=  password + "\n";
-                        }), DispatcherPriority.ContextIdle);
-                        Console.WriteLine("Dimensione : " + dim + "\nUsername\\Password : " + password);
-                    }
-
-                    if (name.Equals("++CLOSE"))
-                    {
-                        eventLog.Dispatcher.Invoke(new Action(() =>
-                        {
-                            eventLog.Text += "Client Disconnected!\n";
-                        }), DispatcherPriority.ContextIdle);
-                        // Shutdown and end connection
-                        lock(this.list)
-                        {
-                            this.list.Remove(client);
-                        }
-                        client.Close();
-                        return;
-                    }
-
-                    if (name.Equals("+++LIST"))
-                    {
-                        String query = String.Format("SELECT ID FROM USERS WHERE Username='{0}' AND Password='{1}'", currentUser.USERNAME, currentUser.PASSWORD);
-                        currentUser.ID = this.dbConn.ExecuteScalar(query);
-                        query = String.Format("SELECT BACKUP_NAME, Version, TIME FROM BACKUP WHERE USER_ID='{0}'", currentUser.ID);
-                        String versions = this.dbConn.ExecuteSelectMultiRow(query, "BACKUP_NAME", "Version", "TIME");
-                        Console.WriteLine(versions);
-                        if (versions != "")
-                        {
-                            client.SendData("+++LIST");
-                            client.sendDimension(versions.Length);
-                            string cmd = client.ReciveCommand();
-                            if (cmd.Equals("+++++OK"))
-                                client.sendVersions(versions);
-                        }
-                        else
-                        {
-                            client.SendData("+++++OK");
-                        }
-                    }
-
-                    if (name.Equals("+BACKUP"))
-                    {
-                        files.Clear();
-                        client.SendData("+BACKUP");
-                        Console.WriteLine("Scarico i dati\n");
-                        //client.SendData("+++++OK");
-                        int dim =  client.reciveDimension();
-                        eventLog.Dispatcher.Invoke(new Action(() =>
-                        {
-                            eventLog.Text += "Dimensione file : " + dim + "\n";
-                        }), DispatcherPriority.ContextIdle);
-                        //client.SendData("+++++OK");
-                        client.ReciveXMLData(dim, fileName);
-                        eventLog.Dispatcher.Invoke(new Action(() =>
-                        {
-                            eventLog.Text += "Upload Complete" + "\n";
-                        }), DispatcherPriority.ContextIdle);
-                        String newPath = client.saveInformationOnDB(fileName, currentUser.ID, dbConn, files);
-                        eventLog.Dispatcher.Invoke(new Action(() =>
-                        {
-                            eventLog.Text += newPath + "\n";
-                        }), DispatcherPriority.ContextIdle);
-                        if (newPath != null)
-                        {
-                            client.SendData("+UPLOAD");
-                            MessageBox.Show(files.Count.ToString());
-                            foreach (clientTCP.Utils.FileInfomation file in files)
-                            {
-                                client.SendData("+++FILE");
-                                eventLog.Dispatcher.Invoke(new Action(() =>
-                                {
-                                    eventLog.Text += "Upload file complete" + "\n";
-                                }), DispatcherPriority.ContextIdle);
-                                client.ReciveFile(newPath + @"\" + file.PATH, file.FILENAME, (int)file.DIMENSION);
-                                string cmd = client.ReciveCommand();
-                                if (!cmd.Equals("+++++OK")) break;
-                            }
-                            // sposto il file .xml nella cartella 
-                            File.Move(fileName, newPath + @"\" + fileName);
-                            // elimino .xml vecchio e o aggiorno 
-                            if (File.Exists(newPath + @"\" + "Config.xml")) File.Delete(newPath + @"\" + "Config.xml");
-                            File.Move(newPath + @"\" + fileName, newPath + @"\" + "Config.xml");
-                        }
-                        name = "+++LIST";
-
-                    }
-                    if (name.Equals("RESTORE"))
-                    {
-                        eventLog.Dispatcher.Invoke(new Action(() =>
-                        {
-                            eventLog.Text += "Restoring files!";
-                        }), DispatcherPriority.ContextIdle);
-                        client.SendData("RESTORE");
-                        int dim = client.reciveDimension();
-                        client.SendData("+++++OK");
-                        string pathForServer = client.reciveCredentials(dim);         
-                        client.SendData("+++++OK");
-                        IList<Utils.InfoFileToRestore> restore = client.restoreBackup(pathForServer);
-                        string cmd = "";
-                        Boolean first = true;
-                        MessageBox.Show("Lenght : " + restore.Count);
-                        foreach (Utils.InfoFileToRestore file in restore)
-                        {
-                            MessageBox.Show("New File");
-                            if (first)
-                                client.SendData("+++FILE");
-                            eventLog.Dispatcher.Invoke(new Action(() =>
-                            {
-                                eventLog.Text += "Restore file " + "\ndim : " + file.ABSOLUTE.Length + "\n";
-                            }), DispatcherPriority.ContextIdle); 
-                            client.sendDimension(file.RELATIVE.Length);
-                            string c = client.ReciveCommand();
-                            if (c.Equals("+++++OK"))
-                            {
-
-                                client.SendData(file.RELATIVE);
-                                c = client.ReciveCommand();
-                                if (c.Equals("+++++OK"))
-                                {
-                                        
-                                    client.sendDimension(file.FILE.Length);
-                                    c = client.ReciveCommand();
-                                    if (c.Equals("+++++OK"))
-                                    {
-                                           
-                                        client.SendData(file.FILE);
-                                        c = client.ReciveCommand();
-                                        if (c.Equals("+++++OK"))
-                                        {
-                                                
-                                            client.sendDimension((int)file.DIM);
-                                            c = client.ReciveCommand();
-                                            if (c.Equals("+++++OK"))
-                                            {
-                                                    
-                                                client.sendFile(file.ABSOLUTE);
-                                                eventLog.Dispatcher.Invoke(new Action(() =>
-                                                {
-                                                    eventLog.Text += "Restore file :  " + file.FILE + "\n path : " + file.RELATIVE + "\n" ;
-                                                }), DispatcherPriority.ContextIdle);
-                                                c = client.ReciveCommand();
-                                                if (c.Equals("+++++OK"))
-                                                {
-                                                    client.SendData("+++NEXT");
-                                                    first = false;
-                                                }
-                                                else
-                                                {
-                                                    client.SendData("++++END");
-                                                }
-                                            }
-                                        }
-                                    }
-                                    
-                                }
-                            }
-                        }
-                        client.SendData("++++END");
-
-                    }
-                    // Shutdown and end connection
-
-                    if (name.Equals("++++REG"))
-                    {
-                        Utils.User user;
-
-                        int UserDim = client.reciveDimension();
-                        Console.WriteLine("ciao");
-
-
-                        client.SendData("+++++OK");
-                        string UsernameReg = client.reciveCredentials(UserDim);
-
-                        client.SendData("+++++OK");
-                        int PassDim = client.reciveDimension();
-
-
-                        client.SendData("+++++OK");
-                        string PasswordReg = client.reciveCredentials(PassDim);
-
-
-                        user = new Utils.User(UsernameReg, PasswordReg, this.dbConn);
-                        user.register();
-
-                    }
-
-                }
-                client.SendData("++CLOSE");
-                client.Close();
-                return;
-
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine(e.Message);
-                server.stopServer();
-                return;
-            }
-        }
+       
     }
 }

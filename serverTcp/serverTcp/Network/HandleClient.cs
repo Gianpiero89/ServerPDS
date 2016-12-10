@@ -13,6 +13,10 @@ using System.Data.SQLite;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Net.Security;
+using System.Windows.Threading;
+using System.Windows.Controls;
+using System.Windows;
+using System.Threading;
 
 namespace serverTcp.Network
 {
@@ -20,11 +24,21 @@ namespace serverTcp.Network
     {
         TcpClient client;
         NetworkStream ns;
+        private Database.SQLiteDatabase dbConn;
+        private TextBox eventLog;
+        private Utils.User currentUser;
+        private List<clientTCP.Utils.FileInfomation> files;
 
-        public HandleClient(TcpClient client)
+
+        public HandleClient(TcpClient client, TextBox eventLog, Database.SQLiteDatabase dbConn)
         {
             this.client = client;
+            this.eventLog = eventLog;
+            this.dbConn = dbConn;
+            files = new List<clientTCP.Utils.FileInfomation>();
             this.ns = client.GetStream();
+            Thread ctThread = new Thread(startClient);
+            ctThread.Start();
         }
 
         public void Close()
@@ -45,15 +59,15 @@ namespace serverTcp.Network
             }
             catch (ObjectDisposedException e)
             {
-                throw;
+                return;
             }
             catch (SocketException e1)
             {
-                throw;
+                return;
             }
             catch (IOException e2)
             {
-                throw;
+                return;
             }
 
 
@@ -252,7 +266,6 @@ namespace serverTcp.Network
 
         public IList<Utils.InfoFileToRestore> restoreBackup(String path)
         {
-            //string path = dbConn.ExecuteSelectMultiRow(String.Format("SELECT BACKUP_NAME, Version FROM BACKUP WHERE USER_ID = '{0}' AND TIME = '{1}'", id, date), "BACKUP_NAME", "Version");
             IList<Utils.InfoFileToRestore> restore = new List<Utils.InfoFileToRestore>();
             XmlDocument doc = new XmlDocument();
             doc.LoadXml(File.ReadAllText(Directory.GetCurrentDirectory() + @"\" + path + @"\Config.xml"));
@@ -350,6 +363,273 @@ namespace serverTcp.Network
             ns.Write(data, 0, data.Length);
             ns.Flush();
 
+        }
+
+        public void startClient()
+        {
+            Utils.User currentUser = null;
+            String name = null;
+            string fileName = Utils.Function.Get16CharacterGenerator() + ".xml";
+            Boolean _clientRunning = true;
+
+            SendData("+++OPEN");
+            try
+            {
+                while (_clientRunning)
+                {
+                    eventLog.Dispatcher.Invoke(new Action(() =>
+                    {
+                        eventLog.Text += "Wait for action!\n";
+                    }), DispatcherPriority.ContextIdle);
+                    name = ReciveCommand();
+                    eventLog.Dispatcher.Invoke(new Action(() =>
+                    {
+                        eventLog.Text += name + "\n";
+                    }), DispatcherPriority.ContextIdle);
+
+                    if (name.Equals("+++AUTH"))
+                    {
+                        SendData("+++++OK");
+                        int dim = reciveDimension();
+                        SendData("+++++OK");
+                        string password = reciveCredentials(dim);
+                        string[] temp = password.Split(':');
+                        currentUser = new Utils.User(temp[0], temp[1]);
+
+                    }
+                    if (name.Equals("++LOGIN"))
+                    {
+                        SendData("+++++OK");
+                        int dim = reciveDimension();
+                        SendData("+++++OK");
+                        string password = reciveCredentials(dim);
+                        string[] temp = password.Split(':');
+
+
+
+                        currentUser = new Utils.User(temp[0], temp[1]);
+                        /////////////////////////////////////////////////////////////////////AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+
+                        string salt = Utils.Function.GetSaltUser(currentUser, dbConn);
+                        if (salt == null)
+                        {
+                            SendData("++CLOSE");
+                            Close();
+                        }
+                        String PasswordSalt = Network.HandleClient.hashPassword(temp[1], salt);
+                        /////////////////////////////////////////////////////////////////////AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+                        currentUser = new Utils.User(temp[0], PasswordSalt);
+
+                        if (Utils.Function.existUser(currentUser, dbConn))
+                        {
+                            SendData("++CLOSE");
+                            Close();
+                        }
+                        else
+                        {
+                            MessageBox.Show("Utente Non Valido!");
+                            SendData("INVALID");
+                            Close();
+                            _clientRunning = false;
+                            return;
+                        }
+
+                        eventLog.Dispatcher.Invoke(new Action(() =>
+                        {
+                            eventLog.Text += password + "\n";
+                        }), DispatcherPriority.ContextIdle);
+                        Console.WriteLine("Dimensione : " + dim + "\nUsername\\Password : " + password);
+                    }
+
+                    if (name.Equals("++CLOSE"))
+                    {
+                        eventLog.Dispatcher.Invoke(new Action(() =>
+                        {
+                            eventLog.Text += "Client Disconnected!\n";
+                        }), DispatcherPriority.ContextIdle);
+                        SendData("++CLOSE");
+                        // Shutdown and end connection
+                        client.Close();
+                        return;
+                    }
+
+                    if (name.Equals("+++LIST"))
+                    {
+                        String query = String.Format("SELECT ID FROM USERS WHERE Username='{0}' AND Password='{1}'", currentUser.USERNAME, currentUser.PASSWORD);
+                        currentUser.ID = this.dbConn.ExecuteScalar(query);
+                        query = String.Format("SELECT BACKUP_NAME, Version, TIME FROM BACKUP WHERE USER_ID='{0}'", currentUser.ID);
+                        String versions = this.dbConn.ExecuteSelectMultiRow(query, "BACKUP_NAME", "Version", "TIME");
+                        Console.WriteLine(versions);
+                        if (versions != "")
+                        {
+                            SendData("+++LIST");
+                            sendDimension(versions.Length);
+                            string cmd = ReciveCommand();
+                            if (cmd.Equals("+++++OK"))
+                                sendVersions(versions);
+                        }
+                        else
+                        {
+                            SendData("+++++OK");
+                        }
+                    }
+
+                    if (name.Equals("+BACKUP"))
+                    {
+                        files.Clear();
+                        SendData("+BACKUP");
+                        Console.WriteLine("Scarico i dati\n");
+                        //client.SendData("+++++OK");
+                        int dim = reciveDimension();
+                        eventLog.Dispatcher.Invoke(new Action(() =>
+                        {
+                            eventLog.Text += "Dimensione file : " + dim + "\n";
+                        }), DispatcherPriority.ContextIdle);
+                        //client.SendData("+++++OK");
+                        ReciveXMLData(dim, fileName);
+                        eventLog.Dispatcher.Invoke(new Action(() =>
+                        {
+                            eventLog.Text += "Upload Complete" + "\n";
+                        }), DispatcherPriority.ContextIdle);
+                        String newPath = saveInformationOnDB(fileName, currentUser.ID, dbConn, files);
+                        eventLog.Dispatcher.Invoke(new Action(() =>
+                        {
+                            eventLog.Text += newPath + "\n";
+                        }), DispatcherPriority.ContextIdle);
+                        if (newPath != null)
+                        {
+                            SendData("+UPLOAD");
+                            MessageBox.Show(files.Count.ToString());
+                            foreach (clientTCP.Utils.FileInfomation file in files)
+                            {
+                                SendData("+++FILE");
+                                eventLog.Dispatcher.Invoke(new Action(() =>
+                                {
+                                    eventLog.Text += "Upload file complete" + "\n";
+                                }), DispatcherPriority.ContextIdle);
+                                ReciveFile(newPath + @"\" + file.PATH, file.FILENAME, (int)file.DIMENSION);
+                                string cmd = ReciveCommand();
+                                if (!cmd.Equals("+++++OK")) break;
+                            }
+                            // sposto il file .xml nella cartella 
+                            File.Move(fileName, newPath + @"\" + fileName);
+                            // elimino .xml vecchio e o aggiorno 
+                            if (File.Exists(newPath + @"\" + "Config.xml")) File.Delete(newPath + @"\" + "Config.xml");
+                            File.Move(newPath + @"\" + fileName, newPath + @"\" + "Config.xml");
+                        }
+                        name = "+++LIST";
+
+                    }
+                    if (name.Equals("RESTORE"))
+                    {
+                        eventLog.Dispatcher.Invoke(new Action(() =>
+                        {
+                            eventLog.Text += "Restoring files!";
+                        }), DispatcherPriority.ContextIdle);
+                        SendData("RESTORE");
+                        int dim = reciveDimension();
+                        SendData("+++++OK");
+                        string pathForServer = reciveCredentials(dim);
+                        SendData("+++++OK");
+                        IList<Utils.InfoFileToRestore> restore = restoreBackup(pathForServer);
+
+                        Boolean first = true;
+                        MessageBox.Show("Lenght : " + restore.Count);
+                        foreach (Utils.InfoFileToRestore file in restore)
+                        {
+                            MessageBox.Show("New File");
+                            if (first)
+                                SendData("+++FILE");
+                            eventLog.Dispatcher.Invoke(new Action(() =>
+                            {
+                                eventLog.Text += "Restore file " + "\ndim : " + file.ABSOLUTE.Length + "\n";
+                            }), DispatcherPriority.ContextIdle);
+                            sendDimension(file.RELATIVE.Length);
+                            string c = ReciveCommand();
+                            if (c.Equals("+++++OK"))
+                            {
+
+                                SendData(file.RELATIVE);
+                                c = ReciveCommand();
+                                if (c.Equals("+++++OK"))
+                                {
+
+                                    sendDimension(file.FILE.Length);
+                                    c = ReciveCommand();
+                                    if (c.Equals("+++++OK"))
+                                    {
+
+                                        SendData(file.FILE);
+                                        c = ReciveCommand();
+                                        if (c.Equals("+++++OK"))
+                                        {
+
+                                            sendDimension((int)file.DIM);
+                                            c = ReciveCommand();
+                                            if (c.Equals("+++++OK"))
+                                            {
+
+                                                sendFile(file.ABSOLUTE);
+                                                eventLog.Dispatcher.Invoke(new Action(() =>
+                                                {
+                                                    eventLog.Text += "Restore file :  " + file.FILE + "\n path : " + file.RELATIVE + "\n";
+                                                }), DispatcherPriority.ContextIdle);
+                                                c = ReciveCommand();
+                                                if (c.Equals("+++++OK"))
+                                                {
+                                                    SendData("+++NEXT");
+                                                    first = false;
+                                                }
+                                                else
+                                                {
+                                                    SendData("++++END");
+                                                }
+                                            }
+                                        }
+                                    }
+
+                                }
+                            }
+                        }
+                        SendData("++++END");
+
+                    }
+                    // Shutdown and end connection
+
+                    if (name.Equals("++++REG"))
+                    {
+                        Utils.User user;
+
+                        int UserDim = reciveDimension();
+                        Console.WriteLine("ciao");
+
+                        SendData("+++++OK");
+                        string UsernameReg = reciveCredentials(UserDim);
+
+                        SendData("+++++OK");
+                        int PassDim = reciveDimension();
+
+
+                        SendData("+++++OK");
+                        string PasswordReg = reciveCredentials(PassDim);
+
+
+                        user = new Utils.User(UsernameReg, PasswordReg, this.dbConn);
+                        user.register();
+
+                    }
+
+                }
+                SendData("++CLOSE");
+                Close();
+                return;
+
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.Message);
+                return;
+            }
         }
 
     }
