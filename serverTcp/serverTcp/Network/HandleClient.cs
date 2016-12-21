@@ -427,10 +427,10 @@ namespace serverTcp.Network
                         }
                         else
                         {
-                            MessageBox.Show("Utente Non Valido!");
+                          //  MessageBox.Show("Utente Non Valido!");
                             SendData("INVALID");
                             Close();
-                            _clientRunning = false;
+                           _clientRunning = false;
                             return;
                         }
 
