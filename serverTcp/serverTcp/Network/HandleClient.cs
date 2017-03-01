@@ -17,6 +17,9 @@ using System.Windows.Threading;
 using System.Windows.Controls;
 using System.Windows;
 using System.Threading;
+using System.Runtime.InteropServices;
+using System.Collections.Concurrent;
+using System.Diagnostics;
 
 namespace serverTcp.Network
 {
@@ -29,7 +32,6 @@ namespace serverTcp.Network
         private Utils.User currentUser;
         private List<clientTCP.Utils.FileInfomation> files;
 
-
         public HandleClient(TcpClient client, TextBox eventLog, Database.SQLiteDatabase dbConn)
         {
             this.client = client;
@@ -37,9 +39,12 @@ namespace serverTcp.Network
             this.dbConn = dbConn;
             files = new List<clientTCP.Utils.FileInfomation>();
             this.ns = client.GetStream();
+            // necessario per avviare la connessione
+            
             Thread ctThread = new Thread(startClient);
             ctThread.Start();
         }
+
 
         public void Close()
         {
@@ -78,17 +83,33 @@ namespace serverTcp.Network
 
         public int reciveDimension()
         {
-            byte[] buf = new byte[client.ReceiveBufferSize];
-            int len = ns.Read(buf, 0, client.ReceiveBufferSize);
-            ns.Flush();
-            return BitConverter.ToInt32(buf, 0);
+            try
+            {
+                byte[] buf = new byte[client.ReceiveBufferSize];
+                int len = ns.Read(buf, 0, client.ReceiveBufferSize);
+                ns.Flush();
+                return BitConverter.ToInt32(buf, 0);
+            }
+            catch(Exception e)
+            {
+                Debug.Print(e.Message);
+                return -1;
+            }
         }
 
         public String reciveCredentials(int dim)
         {
-            Byte[] bytes = new Byte[dim];
-            ns.Read(bytes, 0, dim);
-            return System.Text.Encoding.ASCII.GetString(bytes, 0, dim);
+            try
+            {
+                Byte[] bytes = new Byte[dim];
+                ns.Read(bytes, 0, dim);
+                return System.Text.Encoding.ASCII.GetString(bytes, 0, dim);
+            }
+            catch (Exception e)
+            {
+                Debug.Print(e.Message);
+                return null;
+            }
         }
 
 
@@ -362,25 +383,49 @@ namespace serverTcp.Network
 
         public void sendDimension(int dim)
         {
-            byte[] buf = BitConverter.GetBytes(dim);
-            ns.Write(buf, 0, buf.Length);
-            ns.Flush();
+            try
+            {
+                byte[] buf = BitConverter.GetBytes(dim);
+                ns.Write(buf, 0, buf.Length);
+                ns.Flush();
+            }
+            catch (Exception e)
+            {
+                Debug.Print(e.Message);
+                return;
+            }
 
         }
 
         public void sendVersions(String data)
         {
-            Byte[] dati = System.Text.Encoding.ASCII.GetBytes(data);
-            ns.Write(dati, 0, dati.Length);
-            ns.Flush();
+            try
+            {
+                Byte[] dati = System.Text.Encoding.ASCII.GetBytes(data);
+                ns.Write(dati, 0, dati.Length);
+                ns.Flush();
+            }
+            catch (Exception e)
+            {
+                Debug.Print(e.Message);
+                return;
+            }
 
         }
 
         public void sendFile(String path)
         {
-            Byte[] data = File.ReadAllBytes(@path);
-            ns.Write(data, 0, data.Length);
-            ns.Flush();
+            try
+            {
+                Byte[] data = File.ReadAllBytes(@path);
+                ns.Write(data, 0, data.Length);
+                ns.Flush();
+            }
+            catch (Exception e)
+            {
+                Debug.Print(e.Message);
+                return;
+            }
 
         }
 
@@ -668,6 +713,7 @@ namespace serverTcp.Network
             dbconn.ExecuteScalar(query);
             return;
         }
+
 
     }
 }

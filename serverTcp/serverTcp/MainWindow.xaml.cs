@@ -20,6 +20,7 @@ using System.Windows.Threading;
 using System.ComponentModel;
 using System.Data.SQLite;
 using ServerTCP;
+using System.Runtime.InteropServices;
 
 namespace serverTcp
 {
@@ -163,6 +164,7 @@ namespace serverTcp
                 TcpClient client = null;
                 while (_isRunning)
                 {
+                    Network.HandleClient hc = null;
                     Console.Write("Waiting for a connection... ");
                     eventLog.Dispatcher.Invoke(new Action(() =>
                     {
@@ -170,11 +172,11 @@ namespace serverTcp
                     }), DispatcherPriority.ContextIdle);
 
                     client = server.waitForConnection();
-                    if (client.Connected)
-                    {
-                        Network.HandleClient hc = new Network.HandleClient(client, eventLog, dbConn);
-                        list.Add(hc);
-                    }      
+                    hc = new Network.HandleClient(client, eventLog, dbConn);
+                    SetTcpKeepAlive(client.Client, 50000, 1);
+                    list.Add(hc);
+                    
+                   
                 }
                 if (client != null)
                     client.Close();
@@ -187,6 +189,28 @@ namespace serverTcp
                 return;              
             }
         }
-       
-    }
+
+        public static void SetTcpKeepAlive(Socket socket, uint keepaliveTime, uint keepaliveInterval)
+             {
+                /* the native structure
+              struct tcp_keepalive {
+               ULONG onoff;
+              ULONG keepalivetime;
+               ULONG keepaliveinterval;
+              };
+              */
+   
+              // marshal the equivalent of the native structure into a byte array
+              uint dummy = 0;
+              byte[] inOptionValues = new byte[Marshal.SizeOf(dummy) * 3];
+              BitConverter.GetBytes((uint)(keepaliveTime)).CopyTo(inOptionValues, 0);
+              BitConverter.GetBytes((uint)keepaliveTime).CopyTo(inOptionValues, Marshal.SizeOf(dummy));
+              BitConverter.GetBytes((uint)keepaliveInterval).CopyTo(inOptionValues, Marshal.SizeOf(dummy) * 2);
+ 
+              // write SIO_VALS to Socket IOControl
+              socket.IOControl(IOControlCode.KeepAliveValues, inOptionValues, null);
+          }
+
+
+}
 }
