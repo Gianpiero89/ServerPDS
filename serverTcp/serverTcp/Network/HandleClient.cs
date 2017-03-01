@@ -256,6 +256,7 @@ namespace serverTcp.Network
             // salvo il nuovo backup nella tabella 
             // controllo la versione attuale della cartella di cui effettuo il backup ho scelto di avere al piu 4 versioni 
             String sql = String.Format("SELECT MAX(Version) FROM BACKUP WHERE USER_ID='{0}' AND BACKUP_NAME='{1}'", id, backupID);
+            MessageBox.Show(sql);
             String risultato = dbConn.ExecuteScalar(sql);
             if (risultato != "")
             {
@@ -331,7 +332,7 @@ namespace serverTcp.Network
         {
             string Salt = RandomString(10);
 
-            String sql = String.Format("INSERT INTO USERS (Username, Password,Salt) values ('{0}', '{1}', '{2}')", Username, hashPassword(Password, Salt), Salt);
+            String sql = String.Format("INSERT INTO USERS (Username, Password, Salt) values ('{0}', '{1}', '{2}')", Username, hashPassword(Password, Salt), Salt);
             String risultato = dbConn.ExecuteScalar(sql);
             Console.WriteLine("Risulato: " + risultato);
             return null;
@@ -457,8 +458,7 @@ namespace serverTcp.Network
                         int dim = reciveDimension();
                         SendData("+++++OK");
                         string password = reciveCredentials(dim);
-                        string[] temp = password.Split(':');
-                        currentUser = new Utils.User(temp[0], temp[1]);
+                        currentUser = new Utils.User(password);
 
                     }
                     if (name.Equals("++LOGIN"))
@@ -519,7 +519,7 @@ namespace serverTcp.Network
 
                     if (name.Equals("+++LIST"))
                     {
-                        String query = String.Format("SELECT ID FROM USERS WHERE Username='{0}' AND Password='{1}'", currentUser.USERNAME, currentUser.PASSWORD);
+                        String query = String.Format("SELECT ID FROM USERS WHERE Username='{0}'", currentUser.USERNAME);
                         currentUser.ID = this.dbConn.ExecuteScalar(query);
                         query = String.Format("SELECT BACKUP_NAME, Version, TIME FROM BACKUP WHERE USER_ID='{0}'", currentUser.ID);
                         String versions = this.dbConn.ExecuteSelectMultiRow(query, "BACKUP_NAME", "Version", "TIME");
@@ -563,7 +563,6 @@ namespace serverTcp.Network
                         if (newPath != null)
                         {
                             SendData("+UPLOAD");
-                            //sMessageBox.Show(files.Count.ToString());
                             foreach (clientTCP.Utils.FileInfomation file in files)
                             {
                                 SendData("+++FILE");
@@ -606,10 +605,8 @@ namespace serverTcp.Network
                         IList<Utils.InfoFileToRestore> restore = restoreBackup(pathForServer);
 
                         Boolean first = true;
-                        //MessageBox.Show("Lenght : " + restore.Count);
                         foreach (Utils.InfoFileToRestore file in restore)
                         {
-                            //MessageBox.Show("New File");
                             if (first)
                                 SendData("+++FILE");
                             eventLog.Dispatcher.Invoke(new Action(() =>

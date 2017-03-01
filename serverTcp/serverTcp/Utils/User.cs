@@ -17,6 +17,11 @@ namespace serverTcp.Utils
         public User() { }
 
 
+        public User(String username)
+        {
+            this.username = username;
+        }
+
         public User(String username, String password)
         {
             this.username = username;

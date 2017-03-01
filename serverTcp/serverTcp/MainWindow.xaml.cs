@@ -173,7 +173,7 @@ namespace serverTcp
 
                     client = server.waitForConnection();
                     hc = new Network.HandleClient(client, eventLog, dbConn);
-                    SetTcpKeepAlive(client.Client, 50000, 1);
+                    SetTcpKeepAlive(client.Client, 500, 1);
                     list.Add(hc);
                     
                    
