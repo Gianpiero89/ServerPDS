@@ -71,12 +71,20 @@ namespace serverTcp
 
         public MainWindow()
         {
-            
-            string ip = "127.0.0.1", port = "1500";
-            server = new Server(Utils.Function.checkIPAddress(ip), Int32.Parse(port));
-            //clients = new List<Thread>();
-            
-            list = new List<Network.HandleClient>();
+            try
+            {
+                string ip = getLocalIp();
+                Console.WriteLine(ip);
+                string port = "3000";
+                server = new Server(Utils.Function.checkIPAddress(ip), Int32.Parse(port));
+                //clients = new List<Thread>();
+
+                list = new List<Network.HandleClient>();
+            }
+            catch (Exception e)
+            {
+                return;
+            }
             //CreateDBAndTable();
             InitializeComponent();
         }
@@ -211,6 +219,29 @@ namespace serverTcp
               socket.IOControl(IOControlCode.KeepAliveValues, inOptionValues, null);
           }
 
+        public static string getLocalIp()
+        {
+            string localIp = "127.0.0.1";
 
-}
+            try
+            {
+                IPHostEntry host = Dns.GetHostEntry(Dns.GetHostName());
+                foreach (IPAddress ip in host.AddressList)
+                {
+                    if (ip.AddressFamily == AddressFamily.InterNetwork)
+                    {
+                        localIp = ip.ToString();
+                    }
+                }
+            }
+            catch (Exception)
+            {
+                MessageBox.Show("Sorry, a network error occured.");
+                return null;
+            }
+            return localIp;
+        }
+
+
+    }
 }
