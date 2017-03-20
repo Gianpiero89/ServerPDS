@@ -31,6 +31,7 @@ namespace serverTcp.Network
         private TextBox eventLog;
         private Utils.User currentUser;
         private List<clientTCP.Utils.FileInfomation> files;
+        private volatile Boolean _clientRunning = true;
 
         public HandleClient(TcpClient client, TextBox eventLog, Database.SQLiteDatabase dbConn)
         {
@@ -197,13 +198,14 @@ namespace serverTcp.Network
             int i;
             Int32 numberOfTotalBytes = dim;
             Int32 byteRecivied = 0;
+            FileStream fs = null;
             try
             {
                 if (!Directory.Exists(path))
                 {
                     Directory.CreateDirectory(path);
                 }
-                FileStream fs = new FileStream(path + @"\" + name, FileMode.Create, FileAccess.ReadWrite);
+                fs = new FileStream(path + @"\" + name, FileMode.Create, FileAccess.ReadWrite);
 
 
                 if (dim < lenght)
@@ -215,8 +217,9 @@ namespace serverTcp.Network
                 }
                 else
                 {
+                    DataAvailable(ns, 50);
                     while ((i = ns.Read(bytes, 0, lenght)) != 0)
-                    {
+                    {                        
                         fs.Write(bytes, 0, lenght);
                         byteRecivied += lenght;
                         if (numberOfTotalBytes - byteRecivied < lenght)
@@ -235,6 +238,7 @@ namespace serverTcp.Network
             catch (Exception e)
             {
                 Console.WriteLine(e.Message);
+                if (fs != null) fs.Close();
                 ns.Close();
                 return 2;
             }
@@ -256,7 +260,6 @@ namespace serverTcp.Network
             // salvo il nuovo backup nella tabella 
             // controllo la versione attuale della cartella di cui effettuo il backup ho scelto di avere al piu 4 versioni 
             String sql = String.Format("SELECT MAX(Version) FROM BACKUP WHERE USER_ID='{0}' AND BACKUP_NAME='{1}'", id, backupID);
-            MessageBox.Show(sql);
             String risultato = dbConn.ExecuteScalar(sql);
             if (risultato != "")
             {
@@ -435,7 +438,7 @@ namespace serverTcp.Network
             Utils.User currentUser = null;
             String name = null;
             string fileName = Utils.Function.Get16CharacterGenerator() + ".xml";
-            Boolean _clientRunning = true;
+            
 
             SendData("+++OPEN");
             try
@@ -514,6 +517,7 @@ namespace serverTcp.Network
                         SendData("++CLOSE");
                         // Shutdown and end connection
                         client.Close();
+                        _clientRunning = false;
                         return;
                     }
 
@@ -577,7 +581,11 @@ namespace serverTcp.Network
                                 }
                                 else
                                 {
-                                    Directory.Delete(newPath, true);
+                                    Close();
+                                    string deletes = String.Format(@"C:\Users\Gianpiero\Source\Repos\ServerPDS\serverTcp\serverTcp\bin\debug\{0}", newPath.Trim());                           
+                                    var dir = new DirectoryInfo(deletes);
+                                    dir.Delete(true);
+                                    //Directory.Delete(deletes, true);
                                     deleteEntryFromDataBase(currentUser.ID, newPath, dbConn);
                                     return;
                                 }
@@ -706,9 +714,35 @@ namespace serverTcp.Network
             string[] backupId;
 
             backupId = path.Split('\\');
-            string query = String.Format("Delete from BACKUP where USER_ID='{0}' AND BACKUP_NAME='{1}' order by TIME desc limit 1", id, backupId[0]);
-            dbconn.ExecuteScalar(query);
+            MessageBox.Show("Backup ID : " + backupId[0] + " " + backupId[1]);
+            string query = String.Format("DELETE FROM BACKUP WHERE USER_ID='{0}' AND BACKUP_NAME='{1}' AND Version='{2}'", id, backupId[0], backupId[1]);
+            dbconn.ExecuteNonQuery(query);
             return;
+        }
+
+        public void DataAvailable(NetworkStream netStream, int timeout)
+        {
+            if (netStream.DataAvailable)
+            {
+                MessageBox.Show(netStream.DataAvailable.ToString());
+            }
+            else
+            {
+                MessageBox.Show(netStream.DataAvailable.ToString());
+                ns.Close();
+                throw new Exception("Connection timeout!!");
+            }
+
+            /*
+            int start = Environment.TickCount;
+            while (!netStream.DataAvailable)
+            {
+                if ((Environment.TickCount - start > timeout))
+                    throw new Exception("Connection timeout!!");
+
+                Thread.Sleep(1);
+            }
+            */
         }
 
 
