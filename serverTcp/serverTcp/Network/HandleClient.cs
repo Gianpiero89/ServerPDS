@@ -189,9 +189,8 @@ namespace serverTcp.Network
             }
         }
 
-        public int ReciveFile(String path, String name,  int dim)
+        public int ReciveFile(String path, String name,  int dim, int index)
         {
-            
             // Buffer for reading data
             Byte[] bytes = new Byte[1024];
             int lenght = 1024;
@@ -207,31 +206,33 @@ namespace serverTcp.Network
                 }
                 fs = new FileStream(path + @"\" + name, FileMode.Create, FileAccess.ReadWrite);
 
-
                 if (dim < lenght)
                 {
                     ns.Read(bytes, 0, dim);
                     fs.Write(bytes, 0, dim);
+                    ns.Flush();
                     fs.Close();
                     return 0;
                 }
                 else
                 {
                     //DataAvailable(ns, 5000);
-                    while ((i = ns.Read(bytes, 0, lenght)) != 0)
+                    while ((i = ns.Read(bytes, 0, lenght)) > 0)
                     {                        
                         fs.Write(bytes, 0, lenght);
                         byteRecivied += lenght;
                     
-                        if (numberOfTotalBytes - byteRecivied < lenght)
-                        {
-
+                        if (numberOfTotalBytes - byteRecivied < lenght && numberOfTotalBytes - byteRecivied > 0)
+                        { 
                             lenght = numberOfTotalBytes - byteRecivied;
                             ns.Read(bytes, 0, lenght);
-                            fs.Write(bytes, 0, lenght);  
+                            fs.Write(bytes, 0, lenght);
+                            ns.Flush();
                             break;
                         }
+                        if (numberOfTotalBytes - byteRecivied == 0) break; 
                     }
+                    
                     fs.Close();
                 }
                 return 0;
@@ -572,6 +573,7 @@ namespace serverTcp.Network
                             string cmd = ReciveCommand();
                             if (cmd.Equals("+++++OK"))
                             {
+                                int i = 0;
                                 foreach (clientTCP.Utils.FileInfomation file in files)
                                 {
                                     //MessageBox.Show("Path : " + file.PATH + "\nFilename : " + file.FILENAME + "\nDimension : " + file.DIMENSION);
@@ -580,9 +582,11 @@ namespace serverTcp.Network
                                     {
                                         eventLog.Text += "Upload file complete" + "\n";
                                     }), DispatcherPriority.ContextIdle);
-                                    if (ReciveFile(newPath + @"\" + file.PATH, file.FILENAME, (int)file.DIMENSION) != 2)
+                                    
+                                    if (ReciveFile(newPath + @"\" + file.PATH, file.FILENAME, (int)file.DIMENSION, i) != 2)
                                     {
                                         SendData("+++++OK");
+                                        i++;
                                         cmd = ReciveCommand();
                                         if (!cmd.Equals("+++++OK")) break;
                                     }
@@ -726,32 +730,6 @@ namespace serverTcp.Network
             dbconn.ExecuteNonQuery(query);
             return;
         }
-
-        public void DataAvailable(NetworkStream netStream, int timeout)
-        {
-            if (netStream.DataAvailable)
-            {
-                MessageBox.Show(netStream.DataAvailable.ToString());
-            }
-            else
-            {
-                MessageBox.Show(netStream.DataAvailable.ToString());
-                ns.Close();
-                throw new Exception("Connection timeout!!");
-            }
-
-            /*
-            int start = Environment.TickCount;
-            while (!netStream.DataAvailable)
-            {
-                if ((Environment.TickCount - start > timeout))
-                    throw new Exception("Connection timeout!!");
-
-                Thread.Sleep(1);
-            }
-            */
-        }
-
 
     }
 }

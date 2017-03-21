@@ -179,10 +179,8 @@ namespace serverTcp
                     {
                         eventLog.Text += "Waiting for a connection... \n";
                     }), DispatcherPriority.ContextIdle);
-
                     client = server.waitForConnection();
                     hc = new Network.HandleClient(client, eventLog, dbConn);
-                   // SetTcpKeepAlive(client.Client, 50000, 1);
                     list.Add(hc);
                     
                    
