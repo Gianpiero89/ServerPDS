@@ -73,7 +73,8 @@ namespace serverTcp
         {
             try
             {
-                string ip = getLocalIp();
+                //string ip = getLocalIp();
+                string ip = "127.0.0.1";
                 Console.WriteLine(ip);
                 string port = "3000";
                 server = new Server(Utils.Function.checkIPAddress(ip), Int32.Parse(port));
@@ -181,7 +182,7 @@ namespace serverTcp
 
                     client = server.waitForConnection();
                     hc = new Network.HandleClient(client, eventLog, dbConn);
-                    SetTcpKeepAlive(client.Client, 500, 1);
+                   // SetTcpKeepAlive(client.Client, 50000, 1);
                     list.Add(hc);
                     
                    
@@ -197,27 +198,6 @@ namespace serverTcp
                 return;              
             }
         }
-
-        public static void SetTcpKeepAlive(Socket socket, uint keepaliveTime, uint keepaliveInterval)
-             {
-                /* the native structure
-              struct tcp_keepalive {
-               ULONG onoff;
-              ULONG keepalivetime;
-               ULONG keepaliveinterval;
-              };
-              */
-   
-              // marshal the equivalent of the native structure into a byte array
-              uint dummy = 0;
-              byte[] inOptionValues = new byte[Marshal.SizeOf(dummy) * 3];
-              BitConverter.GetBytes((uint)(keepaliveTime)).CopyTo(inOptionValues, 0);
-              BitConverter.GetBytes((uint)keepaliveTime).CopyTo(inOptionValues, Marshal.SizeOf(dummy));
-              BitConverter.GetBytes((uint)keepaliveInterval).CopyTo(inOptionValues, Marshal.SizeOf(dummy) * 2);
- 
-              // write SIO_VALS to Socket IOControl
-              socket.IOControl(IOControlCode.KeepAliveValues, inOptionValues, null);
-          }
 
         public static string getLocalIp()
         {

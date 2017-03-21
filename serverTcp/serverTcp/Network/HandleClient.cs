@@ -191,7 +191,7 @@ namespace serverTcp.Network
 
         public int ReciveFile(String path, String name,  int dim)
         {
-
+            
             // Buffer for reading data
             Byte[] bytes = new Byte[1024];
             int lenght = 1024;
@@ -217,19 +217,20 @@ namespace serverTcp.Network
                 }
                 else
                 {
-                    DataAvailable(ns, 50);
+                    //DataAvailable(ns, 5000);
                     while ((i = ns.Read(bytes, 0, lenght)) != 0)
                     {                        
                         fs.Write(bytes, 0, lenght);
                         byteRecivied += lenght;
+                    
                         if (numberOfTotalBytes - byteRecivied < lenght)
                         {
+
                             lenght = numberOfTotalBytes - byteRecivied;
                             ns.Read(bytes, 0, lenght);
-                            fs.Write(bytes, 0, lenght);
+                            fs.Write(bytes, 0, lenght);  
                             break;
                         }
-
                     }
                     fs.Close();
                 }
@@ -267,7 +268,7 @@ namespace serverTcp.Network
                 if (num == 4)
                 {       
                     Console.WriteLine("Superata la versione 4\n");
-                    sql = String.Format("SELECT ID FROM BACKUP WHERE USER_ID='{0}' AND BACKUP_NAME='{1}' ORDER BY datetime(TIME) ASC LIMIT 1", id, backupID);
+                    sql = String.Format("SELECT ID FROM BACKUP WHERE USER_ID='{0}' AND BACKUP_NAME='{1}' ORDER BY datetime(TIME) DESC LIMIT 1", id, backupID);
                     risultato = dbConn.ExecuteScalar(sql);
                     Console.WriteLine(risultato);
                     sql = String.Format("UPDATE BACKUP SET TIME='{0}' WHERE ID='{1}'", time, risultato);
@@ -297,7 +298,7 @@ namespace serverTcp.Network
                 XmlNodeList list = element[i].ChildNodes;
                 String path = list.Item(1).FirstChild.Value;
                 String name = list.Item(0).FirstChild.Value;
-                long dim = long.Parse(list.Item(2).FirstChild.Value);
+                int dim = Int32.Parse(list.Item(2).FirstChild.Value);
                 String crc = list.Item(4).FirstChild.Value;
                 DateTime timestamp = Convert.ToDateTime(list.Item(3).FirstChild.Value);
                 files.Add(new clientTCP.Utils.FileInfomation(path, name, dim, System.Text.Encoding.ASCII.GetBytes(crc), timestamp));
@@ -553,7 +554,7 @@ namespace serverTcp.Network
                         {
                             eventLog.Text += "Dimensione file : " + dim + "\n";
                         }), DispatcherPriority.ContextIdle);
-                        //client.SendData("+++++OK");
+                        SendData("+++++OK");
                         ReciveXMLData(dim, fileName);
                         eventLog.Dispatcher.Invoke(new Action(() =>
                         {
@@ -567,34 +568,40 @@ namespace serverTcp.Network
                         if (newPath != null)
                         {
                             SendData("+UPLOAD");
-                            foreach (clientTCP.Utils.FileInfomation file in files)
+                            MessageBox.Show("Numero FIle : " + files.Count);
+                            string cmd = ReciveCommand();
+                            if (cmd.Equals("+++++OK"))
                             {
-                                SendData("+++FILE");
-                                eventLog.Dispatcher.Invoke(new Action(() =>
+                                foreach (clientTCP.Utils.FileInfomation file in files)
                                 {
-                                    eventLog.Text += "Upload file complete" + "\n";
-                                }), DispatcherPriority.ContextIdle);
-                                if (ReciveFile(newPath + @"\" + file.PATH, file.FILENAME, (int)file.DIMENSION) != 2)
-                                {
-                                    string cmd = ReciveCommand();
-                                    if (!cmd.Equals("+++++OK")) break;
+                                    //MessageBox.Show("Path : " + file.PATH + "\nFilename : " + file.FILENAME + "\nDimension : " + file.DIMENSION);
+                                    SendData("+++FILE");
+                                    eventLog.Dispatcher.Invoke(new Action(() =>
+                                    {
+                                        eventLog.Text += "Upload file complete" + "\n";
+                                    }), DispatcherPriority.ContextIdle);
+                                    if (ReciveFile(newPath + @"\" + file.PATH, file.FILENAME, (int)file.DIMENSION) != 2)
+                                    {
+                                        SendData("+++++OK");
+                                        cmd = ReciveCommand();
+                                        if (!cmd.Equals("+++++OK")) break;
+                                    }
+                                    else
+                                    {
+                                        Close();
+                                        string deletes = String.Format(@"C:\Users\Gianpiero\Source\Repos\ServerPDS\serverTcp\serverTcp\bin\debug\{0}", newPath.Trim());
+                                        var dir = new DirectoryInfo(deletes);
+                                        dir.Delete(true);
+                                        deleteEntryFromDataBase(currentUser.ID, newPath, dbConn);
+                                        return;
+                                    }
                                 }
-                                else
-                                {
-                                    Close();
-                                    string deletes = String.Format(@"C:\Users\Gianpiero\Source\Repos\ServerPDS\serverTcp\serverTcp\bin\debug\{0}", newPath.Trim());                           
-                                    var dir = new DirectoryInfo(deletes);
-                                    dir.Delete(true);
-                                    //Directory.Delete(deletes, true);
-                                    deleteEntryFromDataBase(currentUser.ID, newPath, dbConn);
-                                    return;
-                                }
+                                // sposto il file .xml nella cartella 
+                                File.Move(fileName, newPath + @"\" + fileName);
+                                // elimino .xml vecchio e o aggiorno 
+                                if (File.Exists(newPath + @"\" + "Config.xml")) File.Delete(newPath + @"\" + "Config.xml");
+                                File.Move(newPath + @"\" + fileName, newPath + @"\" + "Config.xml");
                             }
-                            // sposto il file .xml nella cartella 
-                            File.Move(fileName, newPath + @"\" + fileName);
-                            // elimino .xml vecchio e o aggiorno 
-                            if (File.Exists(newPath + @"\" + "Config.xml")) File.Delete(newPath + @"\" + "Config.xml");
-                            File.Move(newPath + @"\" + fileName, newPath + @"\" + "Config.xml");
                         }
                         name = "+++LIST";
 
@@ -704,7 +711,7 @@ namespace serverTcp.Network
             }
             catch (Exception e)
             {
-                Console.WriteLine(e.Message);
+                Console.WriteLine(e.Message + "Main Loop");
                 return;
             }
         }

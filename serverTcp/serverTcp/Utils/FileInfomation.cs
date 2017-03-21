@@ -12,7 +12,7 @@ namespace clientTCP.Utils
     {
         private String path;
         private String fileName;
-        private long dimension;
+        private int dimension;
         private DateTime modified;
         private Byte[] md5String;
 
@@ -23,7 +23,7 @@ namespace clientTCP.Utils
             this.fileName = filename;
         }
 
-        public FileInfomation(String path, String filename, long dimension, Byte[] digest, DateTime time)
+        public FileInfomation(String path, String filename, int dimension, Byte[] digest, DateTime time)
         {
             this.path = path;
             this.fileName = filename;
@@ -42,7 +42,7 @@ namespace clientTCP.Utils
             }
         }
 
-        public long DIMENSION
+        public int DIMENSION
         {
             get
             {
