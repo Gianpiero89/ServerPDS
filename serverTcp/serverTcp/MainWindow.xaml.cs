@@ -73,8 +73,8 @@ namespace serverTcp
         {
             try
             {
-                //string ip = getLocalIp();
-                string ip = "127.0.0.1";
+                string ip = getLocalIp();
+                //string ip = "127.0.0.1";
                 Console.WriteLine(ip);
                 string port = "3000";
                 server = new Server(Utils.Function.checkIPAddress(ip), Int32.Parse(port));

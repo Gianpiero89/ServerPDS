@@ -86,8 +86,8 @@ namespace serverTcp.Network
         {
             try
             {
-                byte[] buf = new byte[client.ReceiveBufferSize];
-                int len = ns.Read(buf, 0, client.ReceiveBufferSize);
+                byte[] buf = new byte[15];
+                int len = ns.Read(buf, 0, 15);
                 ns.Flush();
                 return BitConverter.ToInt32(buf, 0);
             }
@@ -142,8 +142,8 @@ namespace serverTcp.Network
         {
 
             // Buffer for reading data
-            Byte[] bytes = new Byte[1024];
-            int lenght = 1024;
+            Byte[] bytes = new Byte[1];
+            int lenght = 1;
             //StringBuilder sb = new StringBuilder();
             int i;
             Int32 numberOfTotalBytes = dim;
@@ -192,8 +192,8 @@ namespace serverTcp.Network
         public int ReciveFile(String path, String name,  int dim, int index)
         {
             // Buffer for reading data
-            Byte[] bytes = new Byte[1024];
-            int lenght = 1024;
+            Byte[] bytes = new Byte[1];
+            int lenght = 1;
             int i;
             Int32 numberOfTotalBytes = dim;
             Int32 byteRecivied = 0;
@@ -227,12 +227,11 @@ namespace serverTcp.Network
                             lenght = numberOfTotalBytes - byteRecivied;
                             ns.Read(bytes, 0, lenght);
                             fs.Write(bytes, 0, lenght);
-                            ns.Flush();
                             break;
                         }
                         if (numberOfTotalBytes - byteRecivied == 0) break; 
                     }
-                    
+                    ns.Flush();
                     fs.Close();
                 }
                 return 0;
@@ -391,8 +390,9 @@ namespace serverTcp.Network
         {
             try
             {
-                byte[] buf = BitConverter.GetBytes(dim);
-                ns.Write(buf, 0, buf.Length);
+                byte[] buf = new byte[15];
+                BitConverter.GetBytes(dim).CopyTo(buf, 0);
+                ns.Write(buf, 0, 15);
                 ns.Flush();
             }
             catch (Exception e)
@@ -561,7 +561,7 @@ namespace serverTcp.Network
                         {
                             eventLog.Text += "Upload Complete" + "\n";
                         }), DispatcherPriority.ContextIdle);
-                        String newPath = saveInformationOnDB(fileName, currentUser.ID, dbConn, files);
+                        string newPath = saveInformationOnDB(fileName, currentUser.ID, dbConn, files);
                         eventLog.Dispatcher.Invoke(new Action(() =>
                         {
                             eventLog.Text += newPath + "\n";
@@ -569,7 +569,7 @@ namespace serverTcp.Network
                         if (newPath != null)
                         {
                             SendData("+UPLOAD");
-                            MessageBox.Show("Numero FIle : " + files.Count);
+                            //MessageBox.Show("Numero FIle : " + files.Count);
                             string cmd = ReciveCommand();
                             if (cmd.Equals("+++++OK"))
                             {
