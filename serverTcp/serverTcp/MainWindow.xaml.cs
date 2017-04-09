@@ -142,8 +142,12 @@ namespace serverTcp
             {
                 foreach (Network.HandleClient tcp in list)
                 {
-                    tcp.SendData("++CLOSE");
-                    tcp.Close();
+                   if (tcp.Client.Connected)
+                    {
+                        tcp.SendData("++CLOSE");
+                        tcp.Close();
+                    }
+                   
                 }
                 list.Clear();
             }

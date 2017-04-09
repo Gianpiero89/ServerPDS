@@ -33,6 +33,14 @@ namespace serverTcp.Network
         private List<clientTCP.Utils.FileInfomation> files;
         private volatile Boolean _clientRunning = true;
 
+        public TcpClient Client
+        {
+            get
+            {
+                return client;
+            }
+        }
+
         public HandleClient(TcpClient client, TextBox eventLog, Database.SQLiteDatabase dbConn)
         {
             this.client = client;
@@ -40,8 +48,7 @@ namespace serverTcp.Network
             this.dbConn = dbConn;
             files = new List<clientTCP.Utils.FileInfomation>();
             this.ns = client.GetStream();
-            // necessario per avviare la connessione
-            
+            // necessario per avviare la connessione   
             Thread ctThread = new Thread(startClient);
             ctThread.Start();
         }
@@ -89,6 +96,7 @@ namespace serverTcp.Network
                 byte[] buf = new byte[15];
                 int len = ns.Read(buf, 0, 15);
                 ns.Flush();
+                //MessageBox.Show(BitConverter.ToInt32(buf, 0) + "");
                 return BitConverter.ToInt32(buf, 0);
             }
             catch(Exception e)
@@ -142,21 +150,23 @@ namespace serverTcp.Network
         {
 
             // Buffer for reading data
-            Byte[] bytes = new Byte[1];
-            int lenght = 1;
+            byte[] bytes = new byte[1024];
+            int lenght = 1024;
             //StringBuilder sb = new StringBuilder();
             int i;
-            Int32 numberOfTotalBytes = dim;
-            Int32 byteRecivied = 0;
+            int numberOfTotalBytes = dim;
+            int byteRecivied = 0;
+            Console.WriteLine("Prima del try");
             try
             {
                 FileStream fs = new FileStream(fileName, FileMode.Create, FileAccess.ReadWrite);
                 Byte[] head = System.Text.Encoding.ASCII.GetBytes("<?xml version='1.0'?>\n");
                 fs.Write(head, 0, head.Length);
-
+                Console.WriteLine("Dentro il try");
 
                 if (dim < lenght)
                 {
+                    Console.WriteLine("Lettura di file Piccoli");
                     ns.Read(bytes, 0, dim);
                     fs.Write(bytes, 0, dim);
                     fs.Close();
@@ -164,17 +174,21 @@ namespace serverTcp.Network
                 }
                 else
                 {
+                    Console.WriteLine("Lettura di file grandi");
                     while ((i = ns.Read(bytes, 0, lenght)) != 0)
                     {
+                        Console.WriteLine("Sto leggendo");
                         fs.Write(bytes, 0, lenght);
                         byteRecivied += lenght;
-                        if (numberOfTotalBytes - byteRecivied < lenght)
+                        if (numberOfTotalBytes - byteRecivied < lenght && numberOfTotalBytes - byteRecivied > 0)
                         {
+                            Console.WriteLine("Ho finito");
                             lenght = numberOfTotalBytes - byteRecivied;
                             ns.Read(bytes, 0, lenght);
                             fs.Write(bytes, 0, lenght);
                             break;
                         }
+                        if (numberOfTotalBytes - byteRecivied == 0) break;
 
                     }
                     fs.Close();
@@ -192,8 +206,8 @@ namespace serverTcp.Network
         public int ReciveFile(String path, String name,  int dim, int index)
         {
             // Buffer for reading data
-            Byte[] bytes = new Byte[1];
-            int lenght = 1;
+            Byte[] bytes = new Byte[512];
+            int lenght = 512;
             int i;
             Int32 numberOfTotalBytes = dim;
             Int32 byteRecivied = 0;
@@ -208,6 +222,7 @@ namespace serverTcp.Network
 
                 if (dim < lenght)
                 {
+                    Console.WriteLine(numberOfTotalBytes - byteRecivied + " , " + dim + " , " + lenght);
                     ns.Read(bytes, 0, dim);
                     fs.Write(bytes, 0, dim);
                     ns.Flush();
@@ -221,18 +236,22 @@ namespace serverTcp.Network
                     {                        
                         fs.Write(bytes, 0, lenght);
                         byteRecivied += lenght;
-                    
+                        //Console.WriteLine(numberOfTotalBytes - byteRecivied + " , " + dim + " , " + lenght);
                         if (numberOfTotalBytes - byteRecivied < lenght && numberOfTotalBytes - byteRecivied > 0)
-                        { 
+                        {
+                            //Console.WriteLine(numberOfTotalBytes - byteRecivied +" , " + dim +" , " + lenght);
                             lenght = numberOfTotalBytes - byteRecivied;
                             ns.Read(bytes, 0, lenght);
                             fs.Write(bytes, 0, lenght);
+                          
                             break;
                         }
-                        if (numberOfTotalBytes - byteRecivied == 0) break; 
+                        if (numberOfTotalBytes - byteRecivied == 0) break;
+
                     }
                     ns.Flush();
                     fs.Close();
+
                 }
                 return 0;
             }
@@ -248,6 +267,7 @@ namespace serverTcp.Network
 
         public String saveInformationOnDB(String fileName, String id, Database.SQLiteDatabase dbConn, List<clientTCP.Utils.FileInfomation> files)
         {
+            //MessageBox.Show(fileName);
             XmlDocument doc = new XmlDocument();
             int num = 0;
             String newPath = null;
@@ -268,7 +288,7 @@ namespace serverTcp.Network
                 if (num == 4)
                 {       
                     Console.WriteLine("Superata la versione 4\n");
-                    sql = String.Format("SELECT ID FROM BACKUP WHERE USER_ID='{0}' AND BACKUP_NAME='{1}' ORDER BY datetime(TIME) DESC LIMIT 1", id, backupID);
+                    sql = String.Format("SELECT ID FROM BACKUP WHERE USER_ID='{0}' AND BACKUP_NAME='{1}' ORDER BY datetime(TIME) ASC LIMIT 1", id, backupID);
                     risultato = dbConn.ExecuteScalar(sql);
                     Console.WriteLine(risultato);
                     sql = String.Format("UPDATE BACKUP SET TIME='{0}' WHERE ID='{1}'", time, risultato);
@@ -305,6 +325,7 @@ namespace serverTcp.Network
                                               
             }
             newPath = backupID + @"\" + num;
+           
             return newPath;      
         }
 
@@ -423,7 +444,8 @@ namespace serverTcp.Network
         {
             try
             {
-                Byte[] data = File.ReadAllBytes(@path);
+                byte[] data = File.ReadAllBytes(@path);
+                Console.WriteLine("Lunghezza File : " + data.Length);
                 ns.Write(data, 0, data.Length);
                 ns.Flush();
             }
@@ -555,8 +577,12 @@ namespace serverTcp.Network
                         {
                             eventLog.Text += "Dimensione file : " + dim + "\n";
                         }), DispatcherPriority.ContextIdle);
+                        Console.WriteLine("Mando OK\n");
                         SendData("+++++OK");
+                        Console.WriteLine("ricevo XML \n");
                         ReciveXMLData(dim, fileName);
+                        Console.WriteLine("ricevuto XML \n");
+                        SendData("+++++OK");
                         eventLog.Dispatcher.Invoke(new Action(() =>
                         {
                             eventLog.Text += "Upload Complete" + "\n";
@@ -622,12 +648,12 @@ namespace serverTcp.Network
                         string pathForServer = reciveCredentials(dim);
                         SendData("+++++OK");
                         IList<Utils.InfoFileToRestore> restore = restoreBackup(pathForServer);
-
-                        Boolean first = true;
+                        Console.WriteLine("Count : " + restore.Count);
+                        int i = 0;
                         foreach (Utils.InfoFileToRestore file in restore)
                         {
-                            if (first)
-                                SendData("+++FILE");
+                          
+                            SendData("+++FILE");
                             eventLog.Dispatcher.Invoke(new Action(() =>
                             {
                                 eventLog.Text += "Restore file " + "\ndim : " + file.ABSOLUTE.Length + "\n";
@@ -656,22 +682,22 @@ namespace serverTcp.Network
                                             c = ReciveCommand();
                                             if (c.Equals("+++++OK"))
                                             {
-
+                                               
                                                 sendFile(file.ABSOLUTE);
+                                                Console.WriteLine("File numero : " + i);
                                                 eventLog.Dispatcher.Invoke(new Action(() =>
                                                 {
                                                     eventLog.Text += "Restore file :  " + file.FILE + "\n path : " + file.RELATIVE + "\n";
                                                 }), DispatcherPriority.ContextIdle);
                                                 c = ReciveCommand();
-                                                if (c.Equals("+++++OK"))
-                                                {
-                                                    SendData("+++NEXT");
-                                                    first = false;
-                                                }
-                                                else
+                                                if (i == restore.Count - 1)
                                                 {
                                                     SendData("++++END");
+                                                    Console.WriteLine("Finito");
                                                 }
+                                              
+                                                i++;
+
                                             }
                                         }
                                     }
@@ -679,10 +705,11 @@ namespace serverTcp.Network
                                 }
                             }
                         }
-                        SendData("++++END");
+                        if( restore.Count == 0) SendData("++++END");
+
 
                     }
-                    // Shutdown and end connection
+
 
                     if (name.Equals("++++REG"))
                     {
@@ -725,7 +752,7 @@ namespace serverTcp.Network
             string[] backupId;
 
             backupId = path.Split('\\');
-            MessageBox.Show("Backup ID : " + backupId[0] + " " + backupId[1]);
+            //.Show("Backup ID : " + backupId[0] + " " + backupId[1]);
             string query = String.Format("DELETE FROM BACKUP WHERE USER_ID='{0}' AND BACKUP_NAME='{1}' AND Version='{2}'", id, backupId[0], backupId[1]);
             dbconn.ExecuteNonQuery(query);
             return;
